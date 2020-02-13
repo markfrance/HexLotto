@@ -353,8 +353,8 @@ contract HexLotto is Ownable, usingProvable{
 
     constructor() public {
         //HexToken address
-        token = address(0x0e8cb31305A25a311A91D6E8D116790B1d6f6e46); //Test token on ropsten
-        hex2 = address(0xc3D5DB665A420a3212005Bc37E6606Db572c1A56); //Test hex2 contract on ropsten
+        token = address(0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39); 
+        hex2 = address(0xD495cC8C7c29c7fA3E027a5759561Ab68C363609); 
         devWallet = address(0x35e9034f47cc00b8A9b555fC1FDB9598b2c245fD);
 
         nonce = 1;
@@ -456,11 +456,11 @@ contract HexLotto is Ownable, usingProvable{
         quantities[3] = quantity.mul(10).div(100); //Monthly
         quantities[4] = quantity.mul(4).div(100); //300 days
         quantities[5] = quantity.mul(1).div(100); //3 yearly
-        quantities[6] = quantity.mul(7).div(100); //Treasury 
+        quantities[6] = quantity.mul(6).div(100); //Treasury 
         quantities[7] = quantity.mul(1).div(100); //Hex2
-        quantities[8] = quantity.mul(2).div(100); //Dev wallet
+        quantities[8] = quantity.mul(3).div(100); //Dev wallet
         
-        //send 7% to treasury 
+        //send 6% to treasury 
         require(ERC20(token).transfer(owner(), quantities[6]));
 
         //approve 1% for hex2 distribution
@@ -468,7 +468,7 @@ contract HexLotto is Ownable, usingProvable{
         ERC20(token).approve(hex2, quantities[7]);
         hex2amount += quantities[7];
 
-        //send 2% to dev
+        //send 3% to dev
         require(ERC20(token).transfer(devWallet, quantities[8]));
 
         hourlyPot += quantities[0];
