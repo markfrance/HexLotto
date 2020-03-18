@@ -118,7 +118,7 @@ contract Treasury is Ownable{
     /**
      * @dev Throws if called by any account other than the hex lotto contract.
      */
-    function transfer(address to, uint256 amount) external onlyHexLotto isHexLottoSet returns(bool){ 
+    function transfer(address to, uint256 amount) external isHexLottoSet onlyHexLotto returns(bool){ 
        require(ERC20(token).transfer(to, amount), "Transfer bonus amount failed");
        return true;
     }
