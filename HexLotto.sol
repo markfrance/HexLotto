@@ -259,7 +259,7 @@ contract Treasury{
 }
 
 contract RandomNumberGenerator{
-     function generateRandomNumber(uint256 maxValue) public view returns(uint256);
+     function generateRandomNumber(uint256 maxValue) public returns(uint256);
 }
 
  /**
@@ -281,7 +281,8 @@ contract HexLotto is Ownable{
         uint256 totalAmount;
         uint256 totalTickets;
         uint256 amountWon;
-        uint256 bonusWithdrawalAmount;
+        uint256 bonusWithdrawalTickets;
+        uint256 bonusAmount;
     }
 
     mapping(bytes32 => uint8) validQueryIds;
@@ -343,6 +344,16 @@ contract HexLotto is Ownable{
         address ref
     );
 
+    event Won(
+        address indexed player,
+        uint amount
+    );
+
+    event Withdrawn(
+        address indexed player,
+        uint amount
+    );
+
     modifier isTreasurySet() {
         require(treasuryContract != address(0), "Treasury contract isn't set");
         _;
@@ -355,7 +366,7 @@ contract HexLotto is Ownable{
 
     constructor() public {
         //HexToken address
-        token = address(0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39);
+        token = address(0x0e8cb31305A25a311A91D6E8D116790B1d6f6e46);
         hex2 = address(0xD495cC8C7c29c7fA3E027a5759561Ab68C363609);
         donatorWallet = address(0x723e82Eb1A1b419Fb36e9bD65E50A979cd13d341);
         devWallet = address(0x35e9034f47cc00b8A9b555fC1FDB9598b2c245fD);
@@ -454,7 +465,7 @@ contract HexLotto is Ownable{
         require(ERC20(token).transfer(devWallet, quantities[4].div(5)), 'send to dev failed');
         require(ERC20(token).transfer(devWallet2, quantities[4].div(5)), 'send to dev2 failed');
         require(ERC20(token).transfer(devWallet3, quantities[4].div(5)), 'send to dev3 failed');
-        require(ERC20(token).transfer(devWallet3, quantities[4].div(5)), 'send to dev3 failed');
+        require(ERC20(token).transfer(devWallet4, quantities[4].div(5)), 'send to dev4 failed');
 
         //update pot values
         hourlyPot += quantities[0];
@@ -531,13 +542,27 @@ contract HexLotto is Ownable{
          return ERC20(token).balanceOf(treasuryContract);
     }
 
-    function getAvailableBonusAmount(address player) public view returns(uint256){
-        uint256 playerAvailable = playerStats[player].totalTickets - playerStats[player].bonusWithdrawalAmount;
-        uint256 totalAvailable = totalTickets - bonusTicketsWithdrawn;
+    function getAvailableBonusTickets(address player) public view returns(uint256){
         
-        uint256 percentAmount = playerAvailable.div(totalAvailable);
+        if(playerStats[player].totalTickets == 0) {
+            return 0;
+        }
 
-        return getTreasuryBalance().mul(percentAmount);
+        return playerStats[player].totalTickets - playerStats[player].bonusWithdrawalTickets;
+    }
+
+    function getAvailableBonusAmount(address player) public view returns(uint256){
+
+        uint256 playerAvailable = getAvailableBonusTickets(player);
+        
+        if(playerAvailable <= 0){
+            return 0;
+        }
+
+        uint256 numerator = playerAvailable.mul(1000);
+        uint256 percentAmount = numerator.div(totalTickets.sub(bonusTicketsWithdrawn)).add(5).div(10);
+
+        return getTreasuryBalance().mul(percentAmount).div(100);
     }
 
     /**
@@ -547,8 +572,12 @@ contract HexLotto is Ownable{
         uint256 amount = getAvailableBonusAmount(msg.sender);
         require(amount > 0, "No bonus available");
         require(Treasury(treasuryContract).transfer(msg.sender, amount), "Withdrawal failed");
-        playerStats[msg.sender].bonusWithdrawalAmount += amount;
-        bonusTicketsWithdrawn += amount;
+        
+        bonusTicketsWithdrawn += (playerStats[msg.sender].totalTickets - playerStats[msg.sender].bonusWithdrawalTickets);
+        playerStats[msg.sender].bonusWithdrawalTickets = playerStats[msg.sender].totalTickets;
+        playerStats[msg.sender].bonusAmount += amount;
+
+        emit Withdrawn(msg.sender, amount);
     }
 
     /**
@@ -556,7 +585,7 @@ contract HexLotto is Ownable{
     * Finishes current game and calls random number
     */
     function finishHourly() external isRandomNumberSet{
-        require(now > lastHourly.add(hour), "Can only finish game once per hour.");
+       // require(now > lastHourly.add(hour), "Can only finish game once per hour.");
         require(hourlyParticipants.length >= minimumParticipants, "Needs to meet minimum participants");
         require(hourlyPot > minimumPotAmount, "Hourly pot needs to be higher before game can finish");
         
@@ -595,6 +624,8 @@ contract HexLotto is Ownable{
         hourlyTickets = 0;
         delete hourlyParticipants;
         hourlyParticipants.push(Entry(0, 0, 0, address(0), address(0)));
+
+        emit Won(hourlyWinner, winnings);
      }
      
   
@@ -603,7 +634,7 @@ contract HexLotto is Ownable{
     * Finishes current game and calls random number
     */
     function finishMonthly() external isRandomNumberSet{
-        require(now > lastMonthly.add(month), "Can only finish game once per month.");
+     //   require(now > lastMonthly.add(month), "Can only finish game once per month.");
         require(monthlyParticipants.length >= minimumParticipants, "Needs to meet minimum participants");
         require(monthlyPot > minimumPotAmount, "Monthly pot needs to be higher before game can finish");
 
@@ -642,6 +673,8 @@ contract HexLotto is Ownable{
         monthlyTickets = 0;
         delete monthlyParticipants;
         monthlyParticipants.push(Entry(0, 0, 0, address(0), address(0)));
+
+        emit Won(monthlyWinner, winnings);
      }
 
     /**
@@ -649,7 +682,7 @@ contract HexLotto is Ownable{
     * Finishes current game and calls random number
     */
     function finishYearly() external isRandomNumberSet{
-        require(now > lastYearly.add(threeHundredDays), "Can only finish game once every 300 days.");
+     //   require(now > lastYearly.add(threeHundredDays), "Can only finish game once every 300 days.");
         require(yearlyParticipants.length >= minimumParticipants, "Needs to meet minimum participants");
         require(yearlyPot > minimumPotAmount, "Yearly pot needs to be higher before game can finish");
 
@@ -687,6 +720,8 @@ contract HexLotto is Ownable{
         yearlyTickets = 0;
         delete yearlyParticipants;
         yearlyParticipants.push(Entry(0, 0, 0, address(0), address(0)));
+
+        emit Won(yearlyWinner, winnings);
      }
 
     /**
@@ -694,7 +729,7 @@ contract HexLotto is Ownable{
     * Finishes current game and calls random number
     */
     function finishThreeYearly() external isRandomNumberSet {
-        require(now > lastThreeYearly.add(threeYears),  "Can only finish game every three years.");
+     //   require(now > lastThreeYearly.add(threeYears),  "Can only finish game every three years.");
         require(threeYearlyParticipants.length >= minimumParticipants, "Needs to meet minimum participants");
         require(threeYearlyPot >  minimumPotAmount, "3 yearly pot needs to be higher before game can finish");
 
@@ -734,6 +769,7 @@ contract HexLotto is Ownable{
         delete threeYearlyParticipants;
         threeYearlyParticipants.push(Entry(0, 0, 0, address(0), address(0)));
 
+        emit Won(threeYearlyWinner, winnings);
      }
 
     /**

@@ -15,7 +15,7 @@ uint256 private nonce;
     /**
     * @dev Generates a random number
     */
-    function generateRandomNumber(uint256 maxValue) public returns(uint256) {
+    function generateRandomNumber(uint256 maxValue) public view returns(uint256) {
     	nonce++;
     	uint256 random = uint256(keccak256(abi.encodePacked(now, block.timestamp, block.difficulty, nonce))) % maxValue;
     	emit generatedRandomNumber(random);

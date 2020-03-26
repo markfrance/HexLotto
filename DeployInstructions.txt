@@ -1,10 +1,23 @@
+HexLotto.sol - Main lotto contract
+RandomNumberGenerator.sol - Contract with RNG algorithm, to be swapped later
+Treasury.sol - Treasury contract for bonus HEX
+(HEX2.Sol - Copy of Hextew contract to deploy on rooster for testing)
+(HexTokenTest.sol - Generic ERC20 token contract to deploy on ropsten for testing)
+
+
+
 MANUAL STEPS FOR DEPLOYING
 
+(ropsten) Deploy test hex token erc20 contract (and send tokens to wallets if not already done)
+(ropsten) Change hex token to deployed test hex token contract address and deploy hex2 test contract
+
 Deploy Hex lotto contract:
+Uncomment any require statements commented for testing
 Change 'token' address to HEX token mainnet/ropsten contract
 Change 'hex2' address to HEX2 main net/ropsten contract
 
 Deploy Treasury Contract:
+Change 'token' address to HEX token mainnet/ropsten contract
 Call setHexLotto contract function with deployed hexlotto address
 Call Hex lotto contract's setTreasury function with deployed treasury contract address
 
@@ -14,6 +27,26 @@ Call Hex lotto contract's setRandomGeneration function with deployed random numb
 Update UI:
 change hextoken contract address
 change hexlotto contract address
-change url link to hexlotto contract address
+change url link to hexlotto contract address 
 copy and update ABI
 change treasury contract address
+compile website
+deploy website to firebase test (https://hex-lotto-rocket.firebaseapp.com/)
+
+
+
+Test tokenm
+https://ropsten.etherscan.io/address/0x0e8cb31305a25a311a91d6e8d116790b1d6f6e46
+0x0e8cb31305A25a311A91D6E8D116790B1d6f6e46
+
+HexLotto
+https://ropsten.etherscan.io/address/0x95dE761DFF91a224672bF98C81C3DaF99E00b7bb
+0x95dE761DFF91a224672bF98C81C3DaF99E00b7bb
+
+Treasury
+https://ropsten.etherscan.io/address/0x3F65F966914E3f708Ea85A7E6Efd9d267471e97e
+0x3F65F966914E3f708Ea85A7E6Efd9d267471e97e
+
+Random GEnerator
+https://ropsten.etherscan.io/address/0xf552ef454374c81a3024b0dacc4d65b58e43f54a
+0xf552ef454374C81a3024B0daCC4d65B58E43F54A

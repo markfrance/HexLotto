@@ -19,6 +19,7 @@ contract Context {
 
 contract ERC20{
     function transfer(address recipient, uint256 amount) external returns (bool);
+     function balanceOf(address account) public view returns (uint256);
 }
 
 contract Ownable is Context {
@@ -88,13 +89,12 @@ contract Ownable is Context {
 
 contract Treasury is Ownable{
 
- address private _hexLotto;
- address private token;
+ address public _hexLotto;
+ address token;
  
-
  constructor () public {
-        token = address(0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39); //HEX token
-        _hexLotto = address(0);
+        token = address(0x0e8cb31305A25a311A91D6E8D116790B1d6f6e46); //HEX token
+        _hexLotto = address(0xe631BFBf22A5c8B5D52663631c51fbe2Bb1902bc);
     }
 
     function setHexLottoContract(address newHexLotto) external onlyOwner{
@@ -106,19 +106,25 @@ contract Treasury is Ownable{
      * @dev Throws if called by any account other than the hex lotto contract.
      */
     modifier onlyHexLotto() {
-        require(msg.sender != _hexLotto, "Caller is not the hex lotto contract");
+        require(msg.sender == _hexLotto, "Caller is not the hex lotto contract");
         _;
     }
 
-    modifier isHexLottoSet() {
-        require(_hexLotto != address(0), "Hex lotto contract is not set");
-        _;
+    /**
+     * @dev Withdraw remaining treasury amount to another wallet
+     */
+    function withdraw(address to) external onlyOwner returns(bool) {
+        require(ERC20(token).balanceOf(address(this)) > 0, "Balance is empty");
+        require(to != address(0), "Can not withdraw to zero address");
+
+        require(ERC20(token).transfer(to, ERC20(token).balanceOf(address(this))), "Withdrawal of treasury failed");
+        return true;
     }
 
     /**
      * @dev Throws if called by any account other than the hex lotto contract.
      */
-    function transfer(address to, uint256 amount) external isHexLottoSet onlyHexLotto returns(bool){ 
+    function transfer(address to, uint256 amount) external onlyHexLotto returns(bool){ 
        require(ERC20(token).transfer(to, amount), "Transfer bonus amount failed");
        return true;
     }
