@@ -250,8 +250,8 @@ contract ERC20{
     function allowance(address owner, address spender) external view returns (uint256);
 }
 
-contract HEX2{
-    function distribute(uint256 _amount) public returns (uint256);
+contract HEX4{
+    function distribute(uint256 _amount) public;
 }
 
 contract Treasury{
@@ -296,11 +296,32 @@ contract HexLotto is Ownable{
     uint256 public bonusTicketsWithdrawn;
     uint256 nonce;
 
+    uint256 public hourlyPotPaid;
+    uint256 public monthlyPotPaid;
+    uint256 public yearlyPotPaid;
+    uint256 public threeYearlyPotPaid;
+
+    uint256 public hourlyQuantity = 69;
+    uint256 public monthlyQuantity = 10;
+    uint256 public yearlyQuantity = 4;
+    uint256 public threeYearlyQuantity = 1;
+
+    uint256 public hourlyEntriesUsed;
+    uint256 public monthlyEntriesUsed;
+    uint256 public yearlyEntriesUsed;
+    uint256 public threeYearlyEntriesUsed;
+
+    uint256 public hourlyTicketsUsed;
+    uint256 public monthlyTicketsUsed;
+    uint256 public yearlyTicketsUsed;
+    uint256 public threeYearlyTicketsUsed;
+
     uint256 public lastWinnerId;
 
     address token;
-    address hex2;
+    address hex4;
     address treasuryContract;
+    address devSplitterContract;
     address randomGenerationContract;
     address donatorWallet;
     address devWallet;
@@ -311,17 +332,7 @@ contract HexLotto is Ownable{
 
     address[] public players;
 
-    uint256 public hourlyPot;
-    uint256 public monthlyPot;
-    uint256 public yearlyPot;
-    uint256 public threeYearlyPot;
-
-    uint256 public hourlyTickets;
-    uint256 public monthlyTickets;
-    uint256 public yearlyTickets;
-    uint256 public threeYearlyTickets;
-
-    uint256 public hex2amount;
+    uint256 public hex4amount;
 
     uint256 public lastHourly = now;
     uint256 public lastMonthly = now;
@@ -334,10 +345,7 @@ contract HexLotto is Ownable{
     uint256 threeHundredDays = day * 300;
     uint256 threeYears = 31556926 * 3;
 
-    Entry[] public hourlyParticipants;
-    Entry[] public monthlyParticipants;
-    Entry[] public yearlyParticipants;
-    Entry[] public threeYearlyParticipants;
+    Entry[] public participantEntries;
 
     event Enter(
         address indexed from,
@@ -367,24 +375,18 @@ contract HexLotto is Ownable{
 
     constructor() public {
         //HexToken address
-        token = address(0x0e8cb31305A25a311A91D6E8D116790B1d6f6e46);
-        hex2 = address(0xD495cC8C7c29c7fA3E027a5759561Ab68C363609);
+        token = address(0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39);
+        hex4 = address(0xd52dca990CFC3760e0Cb0A60D96BE0da43fEbf19);
         donatorWallet = address(0x723e82Eb1A1b419Fb36e9bD65E50A979cd13d341);
-        devWallet = address(0x35e9034f47cc00b8A9b555fC1FDB9598b2c245fD);
-        devWallet2 = address(0xB1A7Fe276cA916d8e7349Fa78ef805F64705331E);
-        devWallet3 = address(0xbf1984B12878c6A25f0921535c76C05a60bdEf39);
-        devWallet4 = address(0xD30BC4859A79852157211E6db19dE159673a67E2);
-        devWallet5 = address(0xe551072153c02fa33d4903CAb0435Fb86F1a80cb);
+        devSplitterContract = address(0xB9990387D85f0F11381B635C69C35e411e173121);
+
         nonce = 1;
         minimumParticipants = 3;
         ticketPrice = 500000000000; //default ticket price 5000 HEX
         minimumPotAmount = 2550000000000; //default min pot amount 25500 HEX
 
         //Push sentinel values
-        hourlyParticipants.push(Entry(0, 0, 0, address(0), address(0)));
-        monthlyParticipants.push(Entry(0, 0, 0, address(0), address(0)));
-        yearlyParticipants.push(Entry(0, 0, 0, address(0), address(0)));
-        threeYearlyParticipants.push(Entry(0, 0, 0, address(0), address(0)));
+        participantEntries.push(Entry(0, 0, 0, address(0), address(0)));
     }
 
     function setTreasury(address newTreasuryContract) public onlyOwner{
@@ -416,67 +418,36 @@ contract HexLotto is Ownable{
     /**
      * @dev Array getter functions
     */
-    function getHourlyParticipants() public view returns(Entry[] memory) {
-        return hourlyParticipants;
+    function getParticipants() public view returns(Entry[] memory) {
+        return participantEntries;
     }
 
-    function getMonthlyParticipants() public view returns(Entry[] memory) {
-        return monthlyParticipants;
-    }
-
-    function getYearlyParticipants() public view returns(Entry[] memory) {
-        return yearlyParticipants;
-    }
-
-    function getThreeYearlyParticipants() public view returns(Entry[] memory) {
-        return threeYearlyParticipants;
-    }
 
     function getPlayers() public view returns(address[] memory) {
         return players;
     }
 
-    function distributeToHex2() public {
-        HEX2(hex2).distribute(hex2amount);
-        hex2amount = 0;
+    function distributeToHex4() public {
+        HEX4(hex4).distribute(hex4amount);
+        hex4amount = 0;
     }
 
     /**
-     * @dev Distributes HEX quantities into the relevant tiers, treasury wallets and approves for HEX2
+     * @dev Distributes HEX quantities into the relevant tiers, treasury wallets and approves for HEXMAX
     */
     function distribute(uint256 quantity, uint256 tickets, address ref) private {
-        uint256[7] memory quantities;
-
-        quantities[0] = quantity.mul(69).div(100); //Hourly
-        quantities[1] = quantity.mul(10).div(100); //Monthly
-        quantities[2] = quantity.mul(4).div(100); //300 days
-        quantities[3] = quantity.mul(1).div(100); //3 yearly
-        quantities[4] = quantity.mul(10).div(100); //Dev
-        quantities[5] = quantity.mul(1).div(100); //Hex2
-        quantities[6] = quantity.mul(5).div(100); //Treasury
-
+     
         //send 5% to owner treasury
-        require(ERC20(token).transfer(treasuryContract, quantities[6]), "send to treasury failed");
+        require(ERC20(token).transfer(treasuryContract, quantity.mul(5).div(100)), "send to treasury failed");
 
-        //approve Hex2 to allow distribution of 1%
-        hex2amount += quantities[5];
-        require(ERC20(token).approve(hex2, hex2amount), "approve hex failed");
+        //approve Hex4 to allow distribution of 1%
+         hex4amount += quantity.mul(1).div(100);
+        require(ERC20(token).approve(hex4, hex4amount), "approve hex failed");
 
         //send 10% to donator & devs split equally
-        require(ERC20(token).transfer(donatorWallet, quantities[4].div(6)), 'send to donator failed');
-        require(ERC20(token).transfer(devWallet, quantities[4].div(6)), 'send to dev failed');
-        require(ERC20(token).transfer(devWallet2, quantities[4].div(6)), 'send to dev2 failed');
-        require(ERC20(token).transfer(devWallet3, quantities[4].div(6)), 'send to dev3 failed');
-        require(ERC20(token).transfer(devWallet4, quantities[4].div(6)), 'send to dev4 failed');
-        require(ERC20(token).transfer(devWallet5, quantities[4].div(6)), 'send to dev5 failed');
+        require(ERC20(token).transfer(devSplitterContract, quantity.mul(10).div(100)), "send to dev splitter failed");
 
-        //update pot values
-        hourlyPot += quantities[0];
-        monthlyPot += quantities[1];
-        yearlyPot += quantities[2];
-        threeYearlyPot += quantities[3];
-
-        saveEntries(tickets, quantities[0], quantities[1], quantities[2], quantities[3], ref);
+        saveEntries(tickets, quantity, ref);
     }
 
     /**
@@ -512,28 +483,13 @@ contract HexLotto is Ownable{
     */
     function saveEntries(
         uint256 tickets, 
-        uint256 hourly, 
-        uint256 monthly, 
-        uint256 yearly, 
-        uint256 threeYearly, 
+        uint256 newQuantity,
         address ref
     ) 
         private 
     {
-        Entry memory hourlyEntry = Entry(hourlyTickets + tickets, tickets, hourly, msg.sender, ref);
-        Entry memory monthlyEntry = Entry(monthlyTickets + tickets, tickets, monthly, msg.sender, ref);
-        Entry memory yearlyEntry = Entry(yearlyTickets + tickets, tickets, yearly, msg.sender, ref);
-        Entry memory threeYearlyEntry = Entry(threeYearlyTickets + tickets, tickets, threeYearly, msg.sender, ref);
-
-        hourlyParticipants.push(hourlyEntry);
-        monthlyParticipants.push(monthlyEntry);
-        yearlyParticipants.push(yearlyEntry);
-        threeYearlyParticipants.push(threeYearlyEntry);
-
-        hourlyTickets += tickets;
-        monthlyTickets += tickets;
-        yearlyTickets += tickets;
-        threeYearlyTickets += tickets;
+        Entry memory newEntry = Entry(totalTickets + tickets, tickets, newQuantity, msg.sender, ref);
+        participantEntries.push(newEntry);
 
         players.push(msg.sender);
     }
@@ -546,6 +502,10 @@ contract HexLotto is Ownable{
     }
 
     function getAvailableBonusTickets(address player) public view returns(uint256){
+
+        if(playerStats[player].totalTickets == 0) {
+            return 0;
+        }
         
         return playerStats[player].totalTickets - playerStats[player].bonusWithdrawalTickets;
     }
@@ -553,8 +513,13 @@ contract HexLotto is Ownable{
     function getAvailableBonusAmount(address player) public view returns(uint256){
 
         uint256 playerAvailable = getAvailableBonusTickets(player);
+        uint256 totalAvailable = totalTickets.sub(bonusTicketsWithdrawn);
+
+        if(playerAvailable == 0 || totalAvailable == 0) {
+            return 0;
+        }
         
-        return getTreasuryBalance().mul(playerAvailable).div(totalTickets.sub(bonusTicketsWithdrawn));
+        return getTreasuryBalance().mul(playerAvailable).div(totalAvailable);
     }
 
     /**
@@ -578,23 +543,34 @@ contract HexLotto is Ownable{
     * Finishes current game and calls random number
     */
     function finishHourly() external isRandomNumberSet{
-       // require(now > lastHourly.add(hour), "Can only finish game once per hour.");
-        require(hourlyParticipants.length >= minimumParticipants, "Needs to meet minimum participants");
+        require(now > lastHourly.add(hour), "Can only finish game once per hour.");
+        uint256 hourlyEntries = participantEntries.length - hourlyEntriesUsed;
+        require(participantEntries.length > 1 && hourlyEntries >= minimumParticipants, "Needs to meet minimum participants");
+
+        uint256 hourlyPot = totalAmount.mul(hourlyQuantity).div(100).sub(hourlyPotPaid);
         require(hourlyPot > minimumPotAmount, "Hourly pot needs to be higher before game can finish");
-        
+
+         uint256 hourlyTickets = totalTickets.sub(hourlyTicketsUsed);
         uint256 winningTicketNumber = RandomNumberGenerator(randomGenerationContract).generateRandomNumber(hourlyTickets);
 
-        pickHourlyWinner(winningTicketNumber);
+        pickHourlyWinner(winningTicketNumber, hourlyPot, hourlyTickets, hourlyEntries);
     }
 
      /**
     * @dev Transfers prize to random winner
     */
-    function pickHourlyWinner(uint256 random) private {
+    function pickHourlyWinner(
+        uint256 random, 
+        uint256 hourlyPot, 
+        uint256 hourlyTickets, 
+        uint256 hourlyEntries
+    ) 
+        private 
+    {
         uint256 randomWinner = random % (hourlyTickets - 1);
         lastWinnerId = randomWinner;
 
-        address[2] memory winner = pickWinner(hourlyParticipants, randomWinner);
+         address[2] memory winner = pickWinner(hourlyEntries, randomWinner);
         address hourlyWinner = winner[0];//buyer address
         address winnerRef = winner[1];//ref address
         require(hourlyWinner != address(0), "Can not send to 0 address");
@@ -612,10 +588,9 @@ contract HexLotto is Ownable{
         playerStats[hourlyWinner].amountWon += hourlyPot;
 
         lastHourly = now;
-        hourlyPot = 0;
-        hourlyTickets = 0;
-        delete hourlyParticipants;
-        hourlyParticipants.push(Entry(0, 0, 0, address(0), address(0)));
+        hourlyPotPaid += hourlyPot;
+        hourlyTicketsUsed = totalTickets;
+        hourlyEntriesUsed = participantEntries.length;
 
         emit Won(hourlyWinner, winnings);
 
@@ -628,23 +603,34 @@ contract HexLotto is Ownable{
     * Finishes current game and calls random number
     */
     function finishMonthly() external isRandomNumberSet{
-     //   require(now > lastMonthly.add(month), "Can only finish game once per month.");
-        require(monthlyParticipants.length >= minimumParticipants, "Needs to meet minimum participants");
+        require(now > lastMonthly.add(month), "Can only finish game once per month.");
+        uint256 monthlyEntries = participantEntries.length - monthlyEntriesUsed;
+        require(participantEntries.length > 1 && monthlyEntries >= minimumParticipants, "Needs to meet minimum participants");
+
+        uint256 monthlyPot = totalAmount.mul(monthlyQuantity).div(100).sub(monthlyPotPaid);
         require(monthlyPot > minimumPotAmount, "Monthly pot needs to be higher before game can finish");
 
-         uint256 winningTicketNumber = RandomNumberGenerator(randomGenerationContract).generateRandomNumber(monthlyTickets);
+        uint256 monthlyTickets = totalTickets.sub(monthlyTicketsUsed);
+        uint256 winningTicketNumber = RandomNumberGenerator(randomGenerationContract).generateRandomNumber(monthlyTickets);
 
-        pickMonthlyWinner(winningTicketNumber);
+        pickMonthlyWinner(winningTicketNumber, monthlyPot, monthlyTickets, monthlyEntries);
     }
 
     /**
     * @dev Transfers prize to random winner
     */
-    function pickMonthlyWinner(uint256 random) private {
+    function pickMonthlyWinner(
+        uint256 random, 
+        uint256 monthlyPot, 
+        uint256 monthlyTickets, 
+        uint256 monthlyEntries
+    ) 
+        private 
+    {
         uint256 randomWinner = random % (monthlyTickets - 1);
         lastWinnerId = randomWinner;
 
-        address[2] memory winner = pickWinner(monthlyParticipants, randomWinner);
+        address[2] memory winner = pickWinner(monthlyEntries, randomWinner);
         address monthlyWinner = winner[0];//buyer address
         address winnerRef = winner[1];//ref address
         require(monthlyWinner != address(0), "Can not send to 0 address");
@@ -662,11 +648,10 @@ contract HexLotto is Ownable{
         playerStats[monthlyWinner].amountWon += monthlyPot;
 
         lastMonthly = now;
-        monthlyPot = 0;
-        monthlyTickets = 0;
-        delete monthlyParticipants;
-        monthlyParticipants.push(Entry(0, 0, 0, address(0), address(0)));
-
+        monthlyPotPaid += monthlyPot;
+        monthlyTicketsUsed = totalTickets;
+        monthlyEntriesUsed = participantEntries.length;
+        
         emit Won(monthlyWinner, winnings);
 
         require(ERC20(token).transfer(monthlyWinner, winnings), "transfer failed");
@@ -677,22 +662,36 @@ contract HexLotto is Ownable{
     * Finishes current game and calls random number
     */
     function finishYearly() external isRandomNumberSet{
-     //   require(now > lastYearly.add(threeHundredDays), "Can only finish game once every 300 days.");
-        require(yearlyParticipants.length >= minimumParticipants, "Needs to meet minimum participants");
+        require(now > lastYearly.add(threeHundredDays), "Can only finish game once every 300 days.");
+        
+        uint256 yearlyEntries = participantEntries.length - yearlyEntriesUsed;
+        require(participantEntries.length > 1 && yearlyEntries >= minimumParticipants, "Needs to meet minimum participants");
+
+        uint256 yearlyPot = totalAmount.mul(yearlyQuantity).div(100).sub(yearlyPotPaid);
         require(yearlyPot > minimumPotAmount, "Yearly pot needs to be higher before game can finish");
 
+        uint256 yearlyTickets = totalTickets.sub(yearlyTicketsUsed);
         uint256 winningTicketNumber = RandomNumberGenerator(randomGenerationContract).generateRandomNumber(yearlyTickets);
-        pickYearlyWinner(winningTicketNumber);
+
+        pickYearlyWinner(winningTicketNumber, yearlyPot, yearlyTickets, yearlyEntries);
+       
     }
 
     /**
     * @dev Transfers prize to random winner
     */
-    function pickYearlyWinner(uint256 random) private {
+    function pickYearlyWinner(
+        uint256 random, 
+        uint256 yearlyPot, 
+        uint256 yearlyTickets, 
+        uint256 yearlyEntries
+    ) 
+        private 
+    {
         uint256 randomWinner = random % (yearlyTickets - 1);
         lastWinnerId = randomWinner;
 
-        address[2] memory winner = pickWinner(yearlyParticipants, randomWinner);
+        address[2] memory winner = pickWinner(yearlyEntries, randomWinner);
         address yearlyWinner = winner[0];//buyer address
         address winnerRef = winner[1];//ref address
         require(yearlyWinner != address(0), "Can not send to 0 address");
@@ -710,11 +709,10 @@ contract HexLotto is Ownable{
         playerStats[yearlyWinner].amountWon += yearlyPot;
 
         lastYearly = now;
-        yearlyPot = 0;
-        yearlyTickets = 0;
-        delete yearlyParticipants;
-        yearlyParticipants.push(Entry(0, 0, 0, address(0), address(0)));
-
+        yearlyPotPaid += yearlyPot;
+   
+        yearlyTicketsUsed = totalTickets;
+        yearlyEntriesUsed = participantEntries.length;
         emit Won(yearlyWinner, winnings);
 
         require(ERC20(token).transfer(yearlyWinner, winnings), "transfer failed");
@@ -725,23 +723,35 @@ contract HexLotto is Ownable{
     * Finishes current game and calls random number
     */
     function finishThreeYearly() external isRandomNumberSet {
-     //   require(now > lastThreeYearly.add(threeYears),  "Can only finish game every three years.");
-        require(threeYearlyParticipants.length >= minimumParticipants, "Needs to meet minimum participants");
-        require(threeYearlyPot >  minimumPotAmount, "3 yearly pot needs to be higher before game can finish");
-
-        uint256 winningTicketNumber = RandomNumberGenerator(randomGenerationContract).generateRandomNumber(threeYearlyTickets);
+        require(now > lastThreeYearly.add(threeYears),  "Can only finish game every three years.");
         
-        pickThreeYearlyWinner(winningTicketNumber);
+        uint256 threeYearlyEntries = participantEntries.length - threeYearlyEntriesUsed;
+        require(participantEntries.length > 1 && threeYearlyEntries >= minimumParticipants, "Needs to meet minimum participants");
+        
+        uint256 threeYearlyPot = totalAmount.mul(yearlyQuantity).div(100).sub(threeYearlyPotPaid);
+        require(threeYearlyPot > minimumPotAmount, "Three yearly pot needs to be higher before game can finish");
+
+        uint256 threeYearlyTickets = totalTickets.sub(threeYearlyTicketsUsed);
+        uint256 winningTicketNumber = RandomNumberGenerator(randomGenerationContract).generateRandomNumber(threeYearlyTickets);
+
+        pickThreeYearlyWinner(winningTicketNumber, threeYearlyPot, threeYearlyTickets, threeYearlyEntries);
     }
 
     /**
     * @dev Transfers prize to random winner
     */
-    function pickThreeYearlyWinner(uint256 random) private {
+    function pickThreeYearlyWinner(
+        uint256 random, 
+        uint256 threeYearlyPot, 
+        uint256 threeYearlyTickets, 
+        uint256 threeYearlyEntries
+    ) 
+        private 
+    {
         uint256 randomWinner = random % (threeYearlyTickets - 1);
         lastWinnerId = randomWinner;
 
-        address[2] memory winner = pickWinner(threeYearlyParticipants, randomWinner);
+        address[2] memory winner = pickWinner(threeYearlyEntries, randomWinner);
         address threeYearlyWinner = winner[0];//buyer address
         address winnerRef = winner[1];//ref address
         require(threeYearlyWinner != address(0), "Can not send to 0 address");
@@ -759,11 +769,11 @@ contract HexLotto is Ownable{
         playerStats[threeYearlyWinner].amountWon += threeYearlyPot;
 
         lastThreeYearly = now;
-        threeYearlyPot = 0;
-        threeYearlyTickets = 0;
-        delete threeYearlyParticipants;
-        threeYearlyParticipants.push(Entry(0, 0, 0, address(0), address(0)));
-
+        threeYearlyPotPaid += threeYearlyPot;
+   
+        threeYearlyTicketsUsed = totalTickets;
+        threeYearlyEntriesUsed = participantEntries.length;
+        
         emit Won(threeYearlyWinner, winnings);
 
         require(ERC20(token).transfer(threeYearlyWinner, winnings), "transfer failed");
@@ -772,28 +782,30 @@ contract HexLotto is Ownable{
     /**
     * @dev Returns a winner address chosen at random from the participant list
     */
-    function pickWinner(Entry[] memory entries, uint256 random) internal pure returns(address[2] memory) {
+    function pickWinner(uint256 usedTickets, uint256 random) internal view returns(address[2] memory){
 
         address winner;
         address ref;
-        uint256 left = 0;
-        uint256 right = entries.length-1;
+         uint256 left = usedTickets;
+          uint256 winningTicket = usedTickets + random;
+        uint256 right = participantEntries.length-1;
+
         uint256 middle;
 
         while(left <= right){
           middle = (left+right) >> 1; // floor((left + right) / 2)
-          if(middle == 0){
+           if(middle == usedTickets){
             require(false, "Sentinel value, no valid winner");
           }
-          uint256 ticket = entries[middle].ticketNumber;
-          if (ticket < random) {
+          uint256 ticket = participantEntries[middle].ticketNumber;
+          if (ticket < winningTicket) {
             left = middle + 1;
           } else {
-            if(entries[middle-1].ticketNumber >= random) {
+             if(participantEntries[middle-1].ticketNumber >= winningTicket) {
               right = middle - 1;
             } else {
-              winner = entries[middle].buyer;
-              ref = entries[middle].ref;
+              winner = participantEntries[middle].buyer;
+              ref = participantEntries[middle].ref;
               break;
             }
           }

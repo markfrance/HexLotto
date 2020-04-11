@@ -32,8 +32,8 @@ https://ropsten.etherscan.io/address/0x0e8cb31305a25a311a91d6e8d116790b1d6f6e46
 0x0e8cb31305A25a311A91D6E8D116790B1d6f6e46
 
 HexLotto
-https://ropsten.etherscan.io/address/0x95dE761DFF91a224672bF98C81C3DaF99E00b7bb
-0x95dE761DFF91a224672bF98C81C3DaF99E00b7bb
+https://ropsten.etherscan.io/address/0xa25e9b26e9556a557963F21ACBe9C55Dd93D3C01
+0xa25e9b26e9556a557963F21ACBe9C55Dd93D3C01
 
 Treasury
 https://ropsten.etherscan.io/address/0x3F65F966914E3f708Ea85A7E6Efd9d267471e97e

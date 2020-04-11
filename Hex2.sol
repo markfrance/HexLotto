@@ -35,10 +35,10 @@ library SafeMath {
 contract TOKEN {
    function totalSupply() external view returns (uint256);
    function balanceOf(address account) external view returns (uint256);
-   function transfer(address recipient, uint256 amount) external returns (bool);
+   function transfer(address receiver, uint numTokens) public returns (bool) 
    function allowance(address owner, address spender) external view returns (uint256);
    function approve(address spender, uint256 amount) external returns (bool);
-   function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+   function transferFrom(address owner, address buyer, uint numTokens) public returns (bool) 
    function stakeStart(uint256 newStakedHearts, uint256 newStakedDays) external;
    function stakeEnd(uint256 stakeIndex, uint40 stakeIdParam) external;
    function stakeCount(address stakerAddr) external view returns (uint256);
@@ -209,7 +209,7 @@ contract HKS is Ownable {
         distributionAddress = address(0xfE8D614431E5fea2329B05839f29B553b1Cb99A2);
         approvedAddress1 = distributionAddress;
         approvedAddress2 = distributionAddress;
-        erc20 = TOKEN(address(0xC6AF013320118788CdDF91F7d888a37C01e2ffE6)); //Changed to test hex token on ropsten
+        erc20 = TOKEN(address(0x0e8cb31305A25a311A91D6E8D116790B1d6f6e46)); //Changed to test hex token on ropsten
     }
 
     function checkAndTransferHEX(uint256 _amount) private {

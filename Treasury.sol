@@ -93,8 +93,8 @@ contract Treasury is Ownable{
  address token;
  
  constructor () public {
-        token = address(0x0e8cb31305A25a311A91D6E8D116790B1d6f6e46); //HEX token
-        _hexLotto = address(0xe631BFBf22A5c8B5D52663631c51fbe2Bb1902bc);
+        token = address(0x2b591e99afe9f32eaa6214f7b7629768c40eeb39); //HEX token
+        _hexLotto = address(0xFAA2919aC89975ca7FB2B8326e9393f56de5F28B);
     }
 
     function setHexLottoContract(address newHexLotto) external onlyOwner{
