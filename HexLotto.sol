@@ -307,6 +307,7 @@ contract HexLotto is Ownable{
     address devWallet2;
     address devWallet3;
     address devWallet4;
+    address devWallet5;
 
     address[] public players;
 
@@ -373,6 +374,7 @@ contract HexLotto is Ownable{
         devWallet2 = address(0xB1A7Fe276cA916d8e7349Fa78ef805F64705331E);
         devWallet3 = address(0xbf1984B12878c6A25f0921535c76C05a60bdEf39);
         devWallet4 = address(0xD30BC4859A79852157211E6db19dE159673a67E2);
+        devWallet5 = address(0xe551072153c02fa33d4903CAb0435Fb86F1a80cb);
         nonce = 1;
         minimumParticipants = 3;
         ticketPrice = 500000000000; //default ticket price 5000 HEX
@@ -461,11 +463,12 @@ contract HexLotto is Ownable{
         require(ERC20(token).approve(hex2, hex2amount), "approve hex failed");
 
         //send 10% to donator & devs split equally
-        require(ERC20(token).transfer(donatorWallet, quantities[4].div(5)), 'send to donator failed');
-        require(ERC20(token).transfer(devWallet, quantities[4].div(5)), 'send to dev failed');
-        require(ERC20(token).transfer(devWallet2, quantities[4].div(5)), 'send to dev2 failed');
-        require(ERC20(token).transfer(devWallet3, quantities[4].div(5)), 'send to dev3 failed');
-        require(ERC20(token).transfer(devWallet4, quantities[4].div(5)), 'send to dev4 failed');
+        require(ERC20(token).transfer(donatorWallet, quantities[4].div(6)), 'send to donator failed');
+        require(ERC20(token).transfer(devWallet, quantities[4].div(6)), 'send to dev failed');
+        require(ERC20(token).transfer(devWallet2, quantities[4].div(6)), 'send to dev2 failed');
+        require(ERC20(token).transfer(devWallet3, quantities[4].div(6)), 'send to dev3 failed');
+        require(ERC20(token).transfer(devWallet4, quantities[4].div(6)), 'send to dev4 failed');
+        require(ERC20(token).transfer(devWallet5, quantities[4].div(6)), 'send to dev5 failed');
 
         //update pot values
         hourlyPot += quantities[0];
@@ -544,10 +547,6 @@ contract HexLotto is Ownable{
 
     function getAvailableBonusTickets(address player) public view returns(uint256){
         
-        if(playerStats[player].totalTickets == 0) {
-            return 0;
-        }
-
         return playerStats[player].totalTickets - playerStats[player].bonusWithdrawalTickets;
     }
 
@@ -555,20 +554,14 @@ contract HexLotto is Ownable{
 
         uint256 playerAvailable = getAvailableBonusTickets(player);
         
-        if(playerAvailable <= 0){
-            return 0;
-        }
-
-        uint256 numerator = playerAvailable.mul(1000);
-        uint256 percentAmount = numerator.div(totalTickets.sub(bonusTicketsWithdrawn)).add(5).div(10);
-
-        return getTreasuryBalance().mul(percentAmount).div(100);
+        return getTreasuryBalance().mul(playerAvailable).div(totalTickets.sub(bonusTicketsWithdrawn));
     }
 
     /**
     * Withdraws all referral/treasury backed percentage amount
     */
     function withdraw() public isTreasurySet {
+        require(totalTickets > bonusTicketsWithdrawn, "No bonus available to withdraw");
         uint256 amount = getAvailableBonusAmount(msg.sender);
         require(amount > 0, "No bonus available");
         require(Treasury(treasuryContract).transfer(msg.sender, amount), "Withdrawal failed");
@@ -615,8 +608,7 @@ contract HexLotto is Ownable{
             winnings = hourlyPot.sub(refWinnings);
             require(ERC20(token).transfer(winnerRef, refWinnings), "ref transfer failed");
         }
-        require(ERC20(token).transfer(hourlyWinner, winnings), "transfer failed");
-
+       
         playerStats[hourlyWinner].amountWon += hourlyPot;
 
         lastHourly = now;
@@ -626,6 +618,8 @@ contract HexLotto is Ownable{
         hourlyParticipants.push(Entry(0, 0, 0, address(0), address(0)));
 
         emit Won(hourlyWinner, winnings);
+
+        require(ERC20(token).transfer(hourlyWinner, winnings), "transfer failed");
      }
      
   
@@ -664,8 +658,7 @@ contract HexLotto is Ownable{
             winnings = monthlyPot.sub(refWinnings);
             require(ERC20(token).transfer(winnerRef, refWinnings), "ref transfer failed");
         }
-        require(ERC20(token).transfer(monthlyWinner, winnings), "transfer failed");
-
+       
         playerStats[monthlyWinner].amountWon += monthlyPot;
 
         lastMonthly = now;
@@ -675,6 +668,8 @@ contract HexLotto is Ownable{
         monthlyParticipants.push(Entry(0, 0, 0, address(0), address(0)));
 
         emit Won(monthlyWinner, winnings);
+
+        require(ERC20(token).transfer(monthlyWinner, winnings), "transfer failed");
      }
 
     /**
@@ -711,7 +706,6 @@ contract HexLotto is Ownable{
             winnings = yearlyPot.sub(refWinnings);
             require(ERC20(token).transfer(winnerRef, refWinnings), "ref transfer failed");
         }
-        require(ERC20(token).transfer(yearlyWinner, winnings), "transfer failed");
 
         playerStats[yearlyWinner].amountWon += yearlyPot;
 
@@ -722,6 +716,8 @@ contract HexLotto is Ownable{
         yearlyParticipants.push(Entry(0, 0, 0, address(0), address(0)));
 
         emit Won(yearlyWinner, winnings);
+
+        require(ERC20(token).transfer(yearlyWinner, winnings), "transfer failed");
      }
 
     /**
@@ -759,8 +755,7 @@ contract HexLotto is Ownable{
             winnings = threeYearlyPot.sub(refWinnings);
             require(ERC20(token).transfer(winnerRef, refWinnings), "ref transfer failed");
         }
-        require(ERC20(token).transfer(threeYearlyWinner, winnings), "transfer failed");
-
+       
         playerStats[threeYearlyWinner].amountWon += threeYearlyPot;
 
         lastThreeYearly = now;
@@ -770,6 +765,8 @@ contract HexLotto is Ownable{
         threeYearlyParticipants.push(Entry(0, 0, 0, address(0), address(0)));
 
         emit Won(threeYearlyWinner, winnings);
+
+        require(ERC20(token).transfer(threeYearlyWinner, winnings), "transfer failed");
      }
 
     /**

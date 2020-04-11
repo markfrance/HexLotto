@@ -1,11 +1,3 @@
-HexLotto.sol - Main lotto contract
-RandomNumberGenerator.sol - Contract with RNG algorithm, to be swapped later
-Treasury.sol - Treasury contract for bonus HEX
-(HEX2.Sol - Copy of Hextew contract to deploy on rooster for testing)
-(HexTokenTest.sol - Generic ERC20 token contract to deploy on ropsten for testing)
-
-
-
 MANUAL STEPS FOR DEPLOYING
 
 (ropsten) Deploy test hex token erc20 contract (and send tokens to wallets if not already done)
