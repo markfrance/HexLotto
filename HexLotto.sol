@@ -262,6 +262,10 @@ contract RandomNumberGenerator{
      function generateRandomNumber(uint256 maxValue) public returns(uint256);
 }
 
+contract HexMoney {
+    function mintHMY(uint hearts, address payable receiver) public returns(bool);
+}
+
  /**
  * @dev Hex Lotto game contract
  */
@@ -323,6 +327,7 @@ contract HexLotto is Ownable{
     address treasuryContract;
     address devSplitterContract;
     address randomGenerationContract;
+    address hexMoneyContract;
     address donatorWallet;
     address devWallet;
     address devWallet2;
@@ -369,7 +374,12 @@ contract HexLotto is Ownable{
     }
 
     modifier isRandomNumberSet() {
-        require(randomGenerationContract != address(0), "Random generator contract contract isn't set");
+        require(randomGenerationContract != address(0), "Random generator contract isn't set");
+        _;
+    }
+
+    modifier isHexMoneySet() {
+        require(hexMoneyContract != address(0), "Hex money contract isn't set");
         _;
     }
 
@@ -397,6 +407,11 @@ contract HexLotto is Ownable{
     function setRandomGenerator(address newRandomGenerator) public onlyOwner {
         require(newRandomGenerator != address(0), "New random generator contract is the 0 address");
         randomGenerationContract = newRandomGenerator;
+    }
+
+    function setHexMoney(address newHexMoneyContract) public onlyOwner {
+        require(newHexMoneyContract != address(0), "New HEX money contract is the 0 address");
+        hexMoneyContract = newHexMoneyContract;
     }
     
     /**
@@ -450,11 +465,12 @@ contract HexLotto is Ownable{
         saveEntries(tickets, quantity, ref);
     }
 
+
     /**
      * @dev Buys 'tickets' for lottery and splits tokens into tier entries
      * User must call approve with this contract address before entering
     */
-    function entry (uint256 tickets, address ref) public isTreasurySet{
+    function entry (uint256 tickets, address ref) public isTreasurySet isHexMoneySet{
 
         uint256 quantity = ticketPrice.mul(tickets);
 
@@ -466,6 +482,9 @@ contract HexLotto is Ownable{
 
         //transfer pre approved amount to contract
         require(ERC20(token).transferFrom(msg.sender, address(this), quantity), "Transfer failed.");
+
+        //Mint hex money
+        require(HexMoney(hexMoneyContract).mintHMY(quantity, msg.sender), "Mint HEX money failed");
 
         // 69% Hourly, 10% Monthly, 4% 300 Days, and 1% 3 Years
         distribute(quantity, tickets, ref);
@@ -551,9 +570,9 @@ contract HexLotto is Ownable{
         require(hourlyPot > minimumPotAmount, "Hourly pot needs to be higher before game can finish");
 
          uint256 hourlyTickets = totalTickets.sub(hourlyTicketsUsed);
-        uint256 winningTicketNumber = RandomNumberGenerator(randomGenerationContract).generateRandomNumber(hourlyTickets);
+        uint256 winningTicketNumber = RandomNumberGenerator(randomGenerationContract).generateRandomNumber(hourlyTickets - 1);
 
-        pickHourlyWinner(winningTicketNumber, hourlyPot, hourlyTickets, hourlyEntries);
+        pickHourlyWinner(winningTicketNumber, hourlyPot, hourlyEntries);
     }
 
      /**
@@ -562,15 +581,14 @@ contract HexLotto is Ownable{
     function pickHourlyWinner(
         uint256 random, 
         uint256 hourlyPot, 
-        uint256 hourlyTickets, 
         uint256 hourlyEntries
     ) 
         private 
     {
-        uint256 randomWinner = random % (hourlyTickets - 1);
+        uint256 randomWinner = random + 1;
         lastWinnerId = randomWinner;
 
-         address[2] memory winner = pickWinner(hourlyEntries, randomWinner);
+        address[2] memory winner = pickWinner(hourlyEntries, randomWinner);
         address hourlyWinner = winner[0];//buyer address
         address winnerRef = winner[1];//ref address
         require(hourlyWinner != address(0), "Can not send to 0 address");
@@ -611,9 +629,9 @@ contract HexLotto is Ownable{
         require(monthlyPot > minimumPotAmount, "Monthly pot needs to be higher before game can finish");
 
         uint256 monthlyTickets = totalTickets.sub(monthlyTicketsUsed);
-        uint256 winningTicketNumber = RandomNumberGenerator(randomGenerationContract).generateRandomNumber(monthlyTickets);
+        uint256 winningTicketNumber = RandomNumberGenerator(randomGenerationContract).generateRandomNumber(monthlyTickets - 1);
 
-        pickMonthlyWinner(winningTicketNumber, monthlyPot, monthlyTickets, monthlyEntries);
+        pickMonthlyWinner(winningTicketNumber, monthlyPot, monthlyEntries);
     }
 
     /**
@@ -622,12 +640,11 @@ contract HexLotto is Ownable{
     function pickMonthlyWinner(
         uint256 random, 
         uint256 monthlyPot, 
-        uint256 monthlyTickets, 
         uint256 monthlyEntries
     ) 
         private 
     {
-        uint256 randomWinner = random % (monthlyTickets - 1);
+        uint256 randomWinner = random + 1;
         lastWinnerId = randomWinner;
 
         address[2] memory winner = pickWinner(monthlyEntries, randomWinner);
@@ -671,9 +688,9 @@ contract HexLotto is Ownable{
         require(yearlyPot > minimumPotAmount, "Yearly pot needs to be higher before game can finish");
 
         uint256 yearlyTickets = totalTickets.sub(yearlyTicketsUsed);
-        uint256 winningTicketNumber = RandomNumberGenerator(randomGenerationContract).generateRandomNumber(yearlyTickets);
+        uint256 winningTicketNumber = RandomNumberGenerator(randomGenerationContract).generateRandomNumber(yearlyTickets - 1);
 
-        pickYearlyWinner(winningTicketNumber, yearlyPot, yearlyTickets, yearlyEntries);
+        pickYearlyWinner(winningTicketNumber, yearlyPot, yearlyEntries);
        
     }
 
@@ -683,12 +700,11 @@ contract HexLotto is Ownable{
     function pickYearlyWinner(
         uint256 random, 
         uint256 yearlyPot, 
-        uint256 yearlyTickets, 
         uint256 yearlyEntries
     ) 
         private 
     {
-        uint256 randomWinner = random % (yearlyTickets - 1);
+        uint256 randomWinner = random + 1;
         lastWinnerId = randomWinner;
 
         address[2] memory winner = pickWinner(yearlyEntries, randomWinner);
@@ -728,13 +744,13 @@ contract HexLotto is Ownable{
         uint256 threeYearlyEntries = participantEntries.length - threeYearlyEntriesUsed;
         require(participantEntries.length > 1 && threeYearlyEntries >= minimumParticipants, "Needs to meet minimum participants");
         
-        uint256 threeYearlyPot = totalAmount.mul(yearlyQuantity).div(100).sub(threeYearlyPotPaid);
+        uint256 threeYearlyPot = totalAmount.mul(threeYearlyQuantity).div(100).sub(threeYearlyPotPaid);
         require(threeYearlyPot > minimumPotAmount, "Three yearly pot needs to be higher before game can finish");
 
         uint256 threeYearlyTickets = totalTickets.sub(threeYearlyTicketsUsed);
-        uint256 winningTicketNumber = RandomNumberGenerator(randomGenerationContract).generateRandomNumber(threeYearlyTickets);
+        uint256 winningTicketNumber = RandomNumberGenerator(randomGenerationContract).generateRandomNumber(threeYearlyTickets - 1);
 
-        pickThreeYearlyWinner(winningTicketNumber, threeYearlyPot, threeYearlyTickets, threeYearlyEntries);
+        pickThreeYearlyWinner(winningTicketNumber, threeYearlyPot, threeYearlyEntries);
     }
 
     /**
@@ -743,12 +759,11 @@ contract HexLotto is Ownable{
     function pickThreeYearlyWinner(
         uint256 random, 
         uint256 threeYearlyPot, 
-        uint256 threeYearlyTickets, 
         uint256 threeYearlyEntries
     ) 
         private 
     {
-        uint256 randomWinner = random % (threeYearlyTickets - 1);
+        uint256 randomWinner = random + 1;
         lastWinnerId = randomWinner;
 
         address[2] memory winner = pickWinner(threeYearlyEntries, randomWinner);
@@ -786,8 +801,8 @@ contract HexLotto is Ownable{
 
         address winner;
         address ref;
-         uint256 left = usedTickets;
-          uint256 winningTicket = usedTickets + random;
+        uint256 left = usedTickets;
+        uint256 winningTicket = usedTickets + random;
         uint256 right = participantEntries.length-1;
 
         uint256 middle;
